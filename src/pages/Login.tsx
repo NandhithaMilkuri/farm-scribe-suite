@@ -13,7 +13,6 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Seed demo users on first load
   useState(() => { seedDemoUsers(); });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -51,12 +50,13 @@ export default function Login() {
           </div>
           <Button type="submit" className="w-full btn-press">Sign In</Button>
         </form>
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          No account? <Link to="/register" className="text-primary underline">Register</Link>
-        </p>
+        <div className="flex justify-between text-sm text-muted-foreground mt-4">
+          <Link to="/forgot-password" className="text-primary underline">Forgot Password?</Link>
+          <Link to="/register" className="text-primary underline">Register</Link>
+        </div>
         <div className="mt-4 p-3 rounded-md bg-secondary text-xs text-muted-foreground">
           <p className="font-medium mb-1">Demo Accounts (password: pass123)</p>
-          <p>nandhitha / arun (operator) · ramesh / suresh (supervisor) · priya (organizer)</p>
+          <p>nandhitha / arun (operator) · ramesh / suresh (supervisor) · priya / kavitha (organizer)</p>
         </div>
       </div>
     </div>
