@@ -9,9 +9,9 @@ import { Users, Sprout, IndianRupee, MapPin, ClipboardList, Car, Wallet } from "
 export default function OperatorDashboard() {
   const navigate = useNavigate();
   const supervisors = getUsers().filter((u) => u.role === "supervisor");
+  const organizers = getUsers().filter((u) => u.role === "organizer");
   const allSupervisorData = getAllDataForRole("supervisor");
 
-  // Calculate totals
   let totalYieldValue = 0;
   let pendingPayments = 0;
   const sharedRaw = localStorage.getItem("AFMS_SHARED");
@@ -25,19 +25,20 @@ export default function OperatorDashboard() {
   const totalReports = allSupervisorData.reduce((sum, s) => sum + ((s.data as any).dailyReports?.length || 0), 0);
 
   const links = [
-    { label: "Villages", icon: <MapPin className="h-5 w-5" />, path: "/villages" },
+    { label: "Villages & Assign", icon: <MapPin className="h-5 w-5" />, path: "/villages" },
     { label: "Supervisors", icon: <Users className="h-5 w-5" />, path: "/supervisors" },
     { label: "Farmers", icon: <Users className="h-5 w-5" />, path: "/farmers" },
     { label: "Crop Yield", icon: <Sprout className="h-5 w-5" />, path: "/crop-yield" },
     { label: "Attendance", icon: <ClipboardList className="h-5 w-5" />, path: "/attendance" },
     { label: "Travel Bills", icon: <Car className="h-5 w-5" />, path: "/travel-bills" },
-    { label: "Salary Management", icon: <Wallet className="h-5 w-5" />, path: "/salary" },
+    { label: "Salary (Sup + Org)", icon: <Wallet className="h-5 w-5" />, path: "/salary" },
   ];
 
   return (
     <AppLayout title="Operator Dashboard">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <DashCard title="Supervisors" value={supervisors.length} icon={<Users className="h-5 w-5" />} />
+        <DashCard title="Organizers" value={organizers.length} icon={<Users className="h-5 w-5" />} />
         <DashCard title="Total Crop Value" value={`₹${totalYieldValue.toLocaleString("en-IN")}`} icon={<IndianRupee className="h-5 w-5" />} />
         <DashCard title="Pending Approvals" value={pendingPayments} icon={<Sprout className="h-5 w-5" />} />
       </div>

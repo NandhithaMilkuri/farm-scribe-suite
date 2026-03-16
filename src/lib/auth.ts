@@ -51,6 +51,42 @@ export function logout() {
   sessionStorage.removeItem("currentUser");
 }
 
+export function resetPassword(username: string, newPassword: string): { success: boolean; error?: string } {
+  const users = getUsers();
+  const idx = users.findIndex((u) => u.username === username);
+  if (idx === -1) return { success: false, error: "Username not found" };
+  if (newPassword.length < 4) return { success: false, error: "Password must be at least 4 characters" };
+  users[idx].password = newPassword;
+  saveUsers(users);
+  return { success: true };
+}
+
+// Village assignments
+interface VillageAssignment {
+  village: string;
+  supervisors: string[];
+  organizers: string[];
+}
+
+const ASSIGNMENTS_KEY = "AFMS_VILLAGE_ASSIGNMENTS";
+
+export function getVillageAssignments(): VillageAssignment[] {
+  return JSON.parse(localStorage.getItem(ASSIGNMENTS_KEY) || "[]");
+}
+
+export function setVillageAssignments(assignments: VillageAssignment[]) {
+  localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify(assignments));
+}
+
+export function getAssignedVillages(username: string, role: UserRole): string[] {
+  const assignments = getVillageAssignments();
+  return assignments
+    .filter((a) => 
+      role === "supervisor" ? a.supervisors.includes(username) : a.organizers.includes(username)
+    )
+    .map((a) => a.village);
+}
+
 // Seed demo users if none exist
 export function seedDemoUsers() {
   const users = getUsers();
@@ -61,6 +97,7 @@ export function seedDemoUsers() {
     { username: "ramesh", password: "pass123", role: "supervisor", fullName: "Ramesh S" },
     { username: "suresh", password: "pass123", role: "supervisor", fullName: "Suresh M" },
     { username: "priya", password: "pass123", role: "organizer", fullName: "Priya R" },
+    { username: "kavitha", password: "pass123", role: "organizer", fullName: "Kavitha D" },
   ];
   saveUsers(demos);
 }

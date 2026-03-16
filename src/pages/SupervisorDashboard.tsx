@@ -20,7 +20,7 @@ export default function SupervisorDashboard() {
     { label: "Farmers", icon: <Users className="h-5 w-5" />, path: "/farmers" },
     { label: "Crop Yield", icon: <Sprout className="h-5 w-5" />, path: "/crop-yield" },
     { label: "Villages", icon: <MapPin className="h-5 w-5" />, path: "/villages" },
-    { label: "Attendance", icon: <ClipboardList className="h-5 w-5" />, path: "/attendance" },
+    { label: "My Attendance", icon: <ClipboardList className="h-5 w-5" />, path: "/attendance" },
   ];
 
   return (
