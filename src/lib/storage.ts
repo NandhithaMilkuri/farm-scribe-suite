@@ -1,4 +1,4 @@
-import { getCurrentUser, type UserRole } from "./auth";
+import { getCurrentUser, getMyOperator, type UserRole } from "./auth";
 
 function getStorageKey(role: UserRole, username: string): string {
   return `AFMS_DATA_${role}_${username}`;
@@ -19,16 +19,27 @@ export function setUserData(data: Record<string, unknown>) {
   localStorage.setItem(key, JSON.stringify({ ...existing, ...data }));
 }
 
-// Shared data accessible across roles (villages, farmers, etc.)
-const SHARED_KEY = "AFMS_SHARED";
+// ── Operator-namespaced shared data ──
+// Each operator has their own set of villages, farmers, crops, salaries etc.
 
-export function getSharedData<T = Record<string, unknown>>(): T {
-  return JSON.parse(localStorage.getItem(SHARED_KEY) || "{}") as T;
+function sharedKey(operatorUsername: string): string {
+  return `AFMS_SHARED_${operatorUsername}`;
 }
 
+/** Get shared data for the current user's operator namespace */
+export function getSharedData<T = Record<string, unknown>>(): T {
+  const op = getMyOperator();
+  if (!op) return {} as T;
+  return JSON.parse(localStorage.getItem(sharedKey(op)) || "{}") as T;
+}
+
+/** Set shared data in the current user's operator namespace */
 export function setSharedData(data: Record<string, unknown>) {
-  const existing = JSON.parse(localStorage.getItem(SHARED_KEY) || "{}");
-  localStorage.setItem(SHARED_KEY, JSON.stringify({ ...existing, ...data }));
+  const op = getMyOperator();
+  if (!op) return;
+  const key = sharedKey(op);
+  const existing = JSON.parse(localStorage.getItem(key) || "{}");
+  localStorage.setItem(key, JSON.stringify({ ...existing, ...data }));
 }
 
 // Get data for a specific user (for cross-role viewing)
