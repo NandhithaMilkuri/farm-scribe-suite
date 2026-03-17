@@ -70,25 +70,55 @@ export function resetPasswordByPhone(phone: string, newPassword: string): { succ
   return { success: true };
 }
 
-// Village assignments
+// ── Operator Mapping ──
+// Tracks which operator each supervisor/organizer belongs to.
+// When operator assigns a village to a user, that user is mapped to the operator.
+const OPERATOR_MAP_KEY = "AFMS_OPERATOR_MAP";
+
+export function getOperatorMap(): Record<string, string> {
+  return JSON.parse(localStorage.getItem(OPERATOR_MAP_KEY) || "{}");
+}
+
+export function setOperatorForUser(username: string, operatorUsername: string) {
+  const map = getOperatorMap();
+  map[username] = operatorUsername;
+  localStorage.setItem(OPERATOR_MAP_KEY, JSON.stringify(map));
+}
+
+/** Returns the operator username whose data namespace this user belongs to */
+export function getMyOperator(): string {
+  const user = getCurrentUser();
+  if (!user) return "";
+  if (user.role === "operator") return user.username;
+  const map = getOperatorMap();
+  return map[user.username] || "";
+}
+
+// ── Village assignments (per operator) ──
 interface VillageAssignment {
   village: string;
   supervisors: string[];
   organizers: string[];
 }
 
-const ASSIGNMENTS_KEY = "AFMS_VILLAGE_ASSIGNMENTS";
-
-export function getVillageAssignments(): VillageAssignment[] {
-  return JSON.parse(localStorage.getItem(ASSIGNMENTS_KEY) || "[]");
+function assignmentsKey(operatorUsername: string): string {
+  return `AFMS_VILLAGE_ASSIGNMENTS_${operatorUsername}`;
 }
 
-export function setVillageAssignments(assignments: VillageAssignment[]) {
-  localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify(assignments));
+export function getVillageAssignments(operatorUsername: string): VillageAssignment[] {
+  if (!operatorUsername) return [];
+  return JSON.parse(localStorage.getItem(assignmentsKey(operatorUsername)) || "[]");
+}
+
+export function setVillageAssignments(operatorUsername: string, assignments: VillageAssignment[]) {
+  localStorage.setItem(assignmentsKey(operatorUsername), JSON.stringify(assignments));
 }
 
 export function getAssignedVillages(username: string, role: UserRole): string[] {
-  const assignments = getVillageAssignments();
+  const op = role === "operator" ? username : getOperatorMap()[username] || "";
+  if (!op) return [];
+  const assignments = getVillageAssignments(op);
+  if (role === "operator") return assignments.map((a) => a.village);
   return assignments
     .filter((a) =>
       role === "supervisor" ? a.supervisors.includes(username) : a.organizers.includes(username)
@@ -96,7 +126,7 @@ export function getAssignedVillages(username: string, role: UserRole): string[] 
     .map((a) => a.village);
 }
 
-// Leave management
+// ── Leave management (per operator namespace) ──
 export interface LeaveRequest {
   id: string;
   username: string;
@@ -106,14 +136,18 @@ export interface LeaveRequest {
   reason: string;
   status: "pending" | "approved" | "rejected";
   appliedOn: string;
+  operatorNamespace: string; // which operator's team
 }
 
-const LEAVES_KEY = "AFMS_LEAVES";
-
-export function getLeaveRequests(): LeaveRequest[] {
-  return JSON.parse(localStorage.getItem(LEAVES_KEY) || "[]");
+function leavesKey(operatorUsername: string): string {
+  return `AFMS_LEAVES_${operatorUsername}`;
 }
 
-export function saveLeaveRequests(leaves: LeaveRequest[]) {
-  localStorage.setItem(LEAVES_KEY, JSON.stringify(leaves));
+export function getLeaveRequests(operatorUsername: string): LeaveRequest[] {
+  if (!operatorUsername) return [];
+  return JSON.parse(localStorage.getItem(leavesKey(operatorUsername)) || "[]");
+}
+
+export function saveLeaveRequests(operatorUsername: string, leaves: LeaveRequest[]) {
+  localStorage.setItem(leavesKey(operatorUsername), JSON.stringify(leaves));
 }

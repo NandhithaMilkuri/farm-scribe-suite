@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getAllDataForRole } from "@/lib/storage";
-import { getUsers, getCurrentUser } from "@/lib/auth";
+import { getUsers, getCurrentUser, getMyOperator, getVillageAssignments } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { IndianRupee } from "lucide-react";
@@ -21,19 +21,27 @@ interface SalaryRecord {
   status: "pending" | "credited";
 }
 
+function salariesKey(operatorUsername: string) {
+  return `AFMS_SALARIES_${operatorUsername}`;
+}
+
 export default function SalaryManagement() {
   const { toast } = useToast();
   const user = getCurrentUser();
+  const operatorNs = getMyOperator();
   const canCredit = user?.role === "operator";
 
-  const supervisors = getUsers().filter((u) => u.role === "supervisor");
+  // Only show supervisors assigned to this operator
+  const assignments = getVillageAssignments(operatorNs);
+  const assignedSupUsernames = new Set(assignments.flatMap((a) => a.supervisors));
+  const supervisors = getUsers().filter((u) => u.role === "supervisor" && assignedSupUsernames.has(u.username));
   const allSupervisorData = getAllDataForRole("supervisor");
 
   const [selectedSup, setSelectedSup] = useState("");
   const [month, setMonth] = useState("");
   const [baseSalary, setBaseSalary] = useState("");
 
-  const savedRecords = JSON.parse(localStorage.getItem("AFMS_SALARIES") || "[]");
+  const savedRecords = JSON.parse(localStorage.getItem(salariesKey(operatorNs)) || "[]");
   const [records, setRecords] = useState<SalaryRecord[]>(savedRecords);
 
   const getSupTotals = (username: string) => {
@@ -58,7 +66,7 @@ export default function SalaryManagement() {
     };
     const updated = [...records, record];
     setRecords(updated);
-    localStorage.setItem("AFMS_SALARIES", JSON.stringify(updated));
+    localStorage.setItem(salariesKey(operatorNs), JSON.stringify(updated));
     setSelectedSup(""); setMonth(""); setBaseSalary("");
     toast({ title: "Supervisor Salary Record Created" });
   };
@@ -66,7 +74,7 @@ export default function SalaryManagement() {
   const creditSalary = (id: string) => {
     const updated = records.map((r) => r.id === id ? { ...r, status: "credited" as const } : r);
     setRecords(updated);
-    localStorage.setItem("AFMS_SALARIES", JSON.stringify(updated));
+    localStorage.setItem(salariesKey(operatorNs), JSON.stringify(updated));
     toast({ title: "Salary Credited", description: "Payment has been processed." });
   };
 

@@ -3,7 +3,7 @@ import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getSharedData, setSharedData } from "@/lib/storage";
-import { getUsers, getCurrentUser, getVillageAssignments, setVillageAssignments, getAssignedVillages } from "@/lib/auth";
+import { getUsers, getCurrentUser, getVillageAssignments, setVillageAssignments, getAssignedVillages, getMyOperator, setOperatorForUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Plus, Users } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,19 +13,18 @@ export default function Villages() {
   const { toast } = useToast();
   const user = getCurrentUser();
   const isOperator = user?.role === "operator";
+  const operatorNs = getMyOperator();
   const [name, setName] = useState("");
   const shared = getSharedData<any>();
   const allVillages: string[] = shared.villages || [];
 
-  // Non-operators see only assigned villages
   const myVillages = isOperator ? allVillages : (user ? getAssignedVillages(user.username, user.role) : []);
   const [villages, setVillages] = useState<string[]>(allVillages);
 
   const supervisors = getUsers().filter((u) => u.role === "supervisor");
   const organizers = getUsers().filter((u) => u.role === "organizer");
-  const [assignments, setAssignments] = useState(getVillageAssignments());
+  const [assignments, setAssignments] = useState(getVillageAssignments(operatorNs));
 
-  // Assignment state
   const [assignVillage, setAssignVillage] = useState("");
   const [assignUser, setAssignUser] = useState("");
   const [assignRole, setAssignRole] = useState<"supervisor" | "organizer">("supervisor");
@@ -58,7 +57,9 @@ export default function Villages() {
     }
     list.push(assignUser);
     setAssignments([...updated]);
-    setVillageAssignments(updated);
+    setVillageAssignments(operatorNs, updated);
+    // Map this user to this operator so they see the right data
+    setOperatorForUser(assignUser, operatorNs);
     setAssignUser("");
     toast({ title: `Village assigned to ${assignRole}` });
   };
