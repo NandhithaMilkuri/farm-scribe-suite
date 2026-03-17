@@ -4,25 +4,22 @@ import DashCard from "@/components/DashCard";
 import { Button } from "@/components/ui/button";
 import { getAllDataForRole } from "@/lib/storage";
 import { getUsers } from "@/lib/auth";
-import { Users, Sprout, IndianRupee, MapPin, ClipboardList, Car, Wallet } from "lucide-react";
+import { Users, Sprout, IndianRupee, MapPin, ClipboardList, Car, Wallet, CalendarOff } from "lucide-react";
 
 export default function OperatorDashboard() {
   const navigate = useNavigate();
   const supervisors = getUsers().filter((u) => u.role === "supervisor");
   const organizers = getUsers().filter((u) => u.role === "organizer");
-  const allSupervisorData = getAllDataForRole("supervisor");
 
-  let totalYieldValue = 0;
-  let pendingPayments = 0;
   const sharedRaw = localStorage.getItem("AFMS_SHARED");
   const shared = sharedRaw ? JSON.parse(sharedRaw) : {};
   const crops: any[] = shared.crops || [];
+  let totalYieldValue = 0;
+  let pendingPayments = 0;
   crops.forEach((c: any) => {
-    totalYieldValue += (c.yield || 0) * (c.price || 0);
-    if (c.status !== "approved") pendingPayments++;
+    totalYieldValue += c.totalValue || 0;
+    if (c.status === "pending") pendingPayments++;
   });
-
-  const totalReports = allSupervisorData.reduce((sum, s) => sum + ((s.data as any).dailyReports?.length || 0), 0);
 
   const links = [
     { label: "Villages & Assign", icon: <MapPin className="h-5 w-5" />, path: "/villages" },
@@ -31,7 +28,8 @@ export default function OperatorDashboard() {
     { label: "Crop Yield", icon: <Sprout className="h-5 w-5" />, path: "/crop-yield" },
     { label: "Attendance", icon: <ClipboardList className="h-5 w-5" />, path: "/attendance" },
     { label: "Travel Bills", icon: <Car className="h-5 w-5" />, path: "/travel-bills" },
-    { label: "Salary (Sup + Org)", icon: <Wallet className="h-5 w-5" />, path: "/salary" },
+    { label: "Supervisor Salary", icon: <Wallet className="h-5 w-5" />, path: "/salary" },
+    { label: "Leave Approvals", icon: <CalendarOff className="h-5 w-5" />, path: "/leaves" },
   ];
 
   return (

@@ -1,19 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { loginUser, seedDemoUsers } from "@/lib/auth";
+import { loginUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sprout } from "lucide-react";
+import { Sprout, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+function generateCaptcha() {
+  const a = Math.floor(Math.random() * 20) + 1;
+  const b = Math.floor(Math.random() * 20) + 1;
+  return { question: `${a} + ${b} = ?`, answer: a + b };
+}
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [captcha, setCaptcha] = useState(generateCaptcha);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  useState(() => { seedDemoUsers(); });
+  const refreshCaptcha = useCallback(() => {
+    setCaptcha(generateCaptcha());
+    setCaptchaInput("");
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,11 +32,17 @@ export default function Login() {
       toast({ title: "Validation Error", description: "All fields are required.", variant: "destructive" });
       return;
     }
+    if (parseInt(captchaInput) !== captcha.answer) {
+      toast({ title: "CAPTCHA Failed", description: "Please solve the math problem correctly.", variant: "destructive" });
+      refreshCaptcha();
+      return;
+    }
     const result = loginUser(username.trim(), password);
     if (result.success && result.user) {
       navigate(`/${result.user.role}`);
     } else {
       toast({ title: "Login Failed", description: result.error, variant: "destructive" });
+      refreshCaptcha();
     }
   };
 
@@ -48,15 +65,23 @@ export default function Login() {
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" />
           </div>
+          <div>
+            <Label>Security Check</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1 rounded-md bg-secondary px-3 py-2 text-sm font-mono-data font-semibold text-center select-none">
+                {captcha.question}
+              </div>
+              <Button type="button" variant="ghost" size="icon" onClick={refreshCaptcha} className="shrink-0">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+            <Input className="mt-2" value={captchaInput} onChange={(e) => setCaptchaInput(e.target.value)} placeholder="Enter answer" type="number" />
+          </div>
           <Button type="submit" className="w-full btn-press">Sign In</Button>
         </form>
         <div className="flex justify-between text-sm text-muted-foreground mt-4">
           <Link to="/forgot-password" className="text-primary underline">Forgot Password?</Link>
           <Link to="/register" className="text-primary underline">Register</Link>
-        </div>
-        <div className="mt-4 p-3 rounded-md bg-secondary text-xs text-muted-foreground">
-          <p className="font-medium mb-1">Demo Accounts (password: pass123)</p>
-          <p>nandhitha / arun (operator) · ramesh / suresh (supervisor) · priya / kavitha (organizer)</p>
         </div>
       </div>
     </div>

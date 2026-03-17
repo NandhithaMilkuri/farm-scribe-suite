@@ -3,7 +3,7 @@ import AppLayout from "@/components/AppLayout";
 import DashCard from "@/components/DashCard";
 import { Button } from "@/components/ui/button";
 import { getUserData } from "@/lib/storage";
-import { ClipboardList, Car, Users, Sprout, MapPin } from "lucide-react";
+import { ClipboardList, Car, Users, Sprout, MapPin, CalendarOff } from "lucide-react";
 
 export default function SupervisorDashboard() {
   const navigate = useNavigate();
@@ -21,6 +21,7 @@ export default function SupervisorDashboard() {
     { label: "Crop Yield", icon: <Sprout className="h-5 w-5" />, path: "/crop-yield" },
     { label: "Villages", icon: <MapPin className="h-5 w-5" />, path: "/villages" },
     { label: "My Attendance", icon: <ClipboardList className="h-5 w-5" />, path: "/attendance" },
+    { label: "Apply Leave", icon: <CalendarOff className="h-5 w-5" />, path: "/leaves" },
   ];
 
   return (

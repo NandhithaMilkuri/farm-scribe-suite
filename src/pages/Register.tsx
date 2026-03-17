@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function Register() {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole | "">("");
   const navigate = useNavigate();
@@ -18,15 +19,19 @@ export default function Register() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim() || !username.trim() || !password || !role) {
+    if (!fullName.trim() || !username.trim() || !phone.trim() || !password || !role) {
       toast({ title: "Validation Error", description: "All fields are required.", variant: "destructive" });
+      return;
+    }
+    if (phone.trim().length !== 10 || !/^\d{10}$/.test(phone.trim())) {
+      toast({ title: "Validation Error", description: "Enter a valid 10-digit phone number.", variant: "destructive" });
       return;
     }
     if (password.length < 4) {
       toast({ title: "Validation Error", description: "Password must be at least 4 characters.", variant: "destructive" });
       return;
     }
-    const result = registerUser({ username: username.trim(), password, role: role as UserRole, fullName: fullName.trim() });
+    const result = registerUser({ username: username.trim(), password, role: role as UserRole, fullName: fullName.trim(), phone: phone.trim() });
     if (result.success) {
       toast({ title: "Registration Successful", description: "Please login." });
       navigate("/login");
@@ -50,6 +55,10 @@ export default function Register() {
           <div>
             <Label>Username</Label>
             <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Choose username" />
+          </div>
+          <div>
+            <Label>Phone Number</Label>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="10-digit phone number" type="tel" maxLength={10} />
           </div>
           <div>
             <Label>Password</Label>

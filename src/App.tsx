@@ -18,6 +18,7 @@ import Attendance from "./pages/Attendance";
 import SalaryManagement from "./pages/SalaryManagement";
 import FarmerPayments from "./pages/FarmerPayments";
 import Supervisors from "./pages/Supervisors";
+import LeaveManagement from "./pages/LeaveManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ const App = () => (
           <Route path="/salary" element={<ProtectedRoute allowedRoles={["operator"]}><SalaryManagement /></ProtectedRoute>} />
           <Route path="/farmer-payments" element={<ProtectedRoute allowedRoles={["organizer"]}><FarmerPayments /></ProtectedRoute>} />
           <Route path="/supervisors" element={<ProtectedRoute allowedRoles={["operator"]}><Supervisors /></ProtectedRoute>} />
+          <Route path="/leaves" element={<ProtectedRoute><LeaveManagement /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
