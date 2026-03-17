@@ -3,33 +3,28 @@ import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import DashCard from "@/components/DashCard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { getSharedData } from "@/lib/storage";
-import { getUserData, setUserData } from "@/lib/storage";
+import { getSharedData, getUserData, setUserData } from "@/lib/storage";
 import { getCurrentUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { Users, IndianRupee, ClipboardList, MapPin, CalendarCheck } from "lucide-react";
+import { Users, IndianRupee, ClipboardList, MapPin, CalendarCheck, CalendarOff } from "lucide-react";
 
 export default function OrganizerDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const user = getCurrentUser();
   const shared = getSharedData<any>();
-  const farmers: any[] = shared.farmers || [];
-  const payments: any[] = shared.farmerPayments || [];
-  const paidCount = payments.filter((p: any) => p.status === "paid").length;
+  const crops: any[] = shared.crops || [];
+  const fundedForPayment = crops.filter((c: any) => c.status === "approved").length;
+  const paidCount = crops.filter((c: any) => c.status === "funded").length;
+  const totalCommission = crops.filter((c: any) => c.status === "funded").reduce((s: number, c: any) => s + (c.commission || 0), 0);
 
-  // Daily check-in for attendance
   const data = getUserData<any>();
   const checkIns: any[] = data.dailyCheckIns || [];
   const today = new Date().toISOString().split("T")[0];
   const checkedInToday = checkIns.some((c: any) => c.date === today);
 
   const handleCheckIn = () => {
-    if (checkedInToday) {
-      toast({ title: "Already checked in today" });
-      return;
-    }
+    if (checkedInToday) { toast({ title: "Already checked in today" }); return; }
     const updated = [...checkIns, { id: Date.now().toString(), date: today }];
     setUserData({ dailyCheckIns: updated });
     toast({ title: "Checked in for today!" });
@@ -41,14 +36,15 @@ export default function OrganizerDashboard() {
     { label: "Farmers", icon: <Users className="h-5 w-5" />, path: "/farmers" },
     { label: "Farmer Payments", icon: <IndianRupee className="h-5 w-5" />, path: "/farmer-payments" },
     { label: "My Attendance", icon: <ClipboardList className="h-5 w-5" />, path: "/attendance" },
+    { label: "Apply Leave", icon: <CalendarOff className="h-5 w-5" />, path: "/leaves" },
   ];
 
   return (
     <AppLayout title="Organizer Dashboard">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <DashCard title="Total Farmers" value={farmers.length} icon={<Users className="h-5 w-5" />} />
-        <DashCard title="Payments Completed" value={paidCount} icon={<IndianRupee className="h-5 w-5" />} />
-        <DashCard title="Pending Payments" value={payments.filter((p: any) => p.status !== "paid").length} icon={<IndianRupee className="h-5 w-5" />} />
+        <DashCard title="Ready to Pay" value={fundedForPayment} icon={<IndianRupee className="h-5 w-5" />} />
+        <DashCard title="Payments Sent" value={paidCount} icon={<IndianRupee className="h-5 w-5" />} />
+        <DashCard title="Total Commission" value={`₹${totalCommission.toLocaleString("en-IN")}`} icon={<IndianRupee className="h-5 w-5" />} />
         <DashCard title="Days Present" value={checkIns.length} icon={<CalendarCheck className="h-5 w-5" />} />
       </div>
 
@@ -64,7 +60,7 @@ export default function OrganizerDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {links.map((l) => (
           <Button key={l.path} variant="outline" className="h-auto py-4 flex flex-col gap-2 btn-press" onClick={() => navigate(l.path)}>
             <span className="text-primary">{l.icon}</span>

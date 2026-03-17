@@ -7,17 +7,19 @@ import { getSharedData, setSharedData } from "@/lib/storage";
 import { getCurrentUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, Send } from "lucide-react";
 
 interface CropEntry {
   id: string;
   farmerName: string;
   village: string;
   cropType: string;
-  yield: number;
+  yieldQty: number;
   price: number;
   totalValue: number;
-  status: "pending" | "approved";
+  commission: number; // 10% for organizer
+  farmerAmount: number; // 90% to farmer
+  status: "pending" | "approved" | "funded";
   addedBy: string;
 }
 
@@ -45,9 +47,13 @@ export default function CropYield() {
     }
     const y = parseFloat(yieldQty);
     const p = parseFloat(price);
+    const total = y * p;
+    const commission = total * 0.10;
+    const farmerAmount = total - commission;
     const entry: CropEntry = {
       id: Date.now().toString(), farmerName, village, cropType: cropType.trim(),
-      yield: y, price: p, totalValue: y * p, status: "pending", addedBy: user?.username || "",
+      yieldQty: y, price: p, totalValue: total, commission, farmerAmount,
+      status: "pending", addedBy: user?.username || "",
     };
     const updated = [...crops, entry];
     setCrops(updated);
@@ -60,8 +66,10 @@ export default function CropYield() {
     const updated = crops.map((c) => c.id === id ? { ...c, status: "approved" as const } : c);
     setCrops(updated);
     setSharedData({ crops: updated });
-    toast({ title: "Payment Approved" });
+    toast({ title: "Approved — Funds sent to Organizer", description: "Organizer can now process farmer payment." });
   };
+
+  const fmt = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 
   return (
     <AppLayout title="Crop Yield">
@@ -80,12 +88,16 @@ export default function CropYield() {
             <Input value={cropType} onChange={(e) => setCropType(e.target.value)} placeholder="Crop type" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Input type="number" value={yieldQty} onChange={(e) => setYieldQty(e.target.value)} placeholder="Yield (kg)" />
-            <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Market price (₹/kg)" />
+            <Input type="number" value={yieldQty} onChange={(e) => setYieldQty(e.target.value)} placeholder="Yield (quintals)" />
+            <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Market price (₹/quintal)" />
             <Button className="btn-press gap-1.5" onClick={addCrop}><Plus className="h-4 w-4" /> Add</Button>
           </div>
           {yieldQty && price && (
-            <p className="text-sm text-muted-foreground">Total Value: <span className="font-mono-data font-semibold text-foreground">₹{(parseFloat(yieldQty || "0") * parseFloat(price || "0")).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+              <p>Total Value: <span className="font-mono-data font-semibold">{fmt(parseFloat(yieldQty || "0") * parseFloat(price || "0"))}</span></p>
+              <p>Organizer 10%: <span className="font-mono-data font-semibold text-primary">{fmt(parseFloat(yieldQty || "0") * parseFloat(price || "0") * 0.10)}</span></p>
+              <p>Farmer 90%: <span className="font-mono-data font-semibold">{fmt(parseFloat(yieldQty || "0") * parseFloat(price || "0") * 0.90)}</span></p>
+            </div>
           )}
         </div>
       )}
@@ -96,9 +108,11 @@ export default function CropYield() {
               <th className="py-2 pr-3">Farmer</th>
               <th className="py-2 pr-3">Village</th>
               <th className="py-2 pr-3">Crop</th>
-              <th className="py-2 pr-3">Yield (kg)</th>
-              <th className="py-2 pr-3">Price (₹/kg)</th>
-              <th className="py-2 pr-3">Total Value</th>
+              <th className="py-2 pr-3">Qty (qtl)</th>
+              <th className="py-2 pr-3">Price (₹/qtl)</th>
+              <th className="py-2 pr-3">Total</th>
+              <th className="py-2 pr-3">Org 10%</th>
+              <th className="py-2 pr-3">Farmer 90%</th>
               <th className="py-2 pr-3">Status</th>
               {canApprove && <th className="py-2">Action</th>}
             </tr>
@@ -109,24 +123,28 @@ export default function CropYield() {
                 <td className="py-2.5 pr-3 font-medium">{c.farmerName}</td>
                 <td className="py-2.5 pr-3">{c.village}</td>
                 <td className="py-2.5 pr-3">{c.cropType}</td>
-                <td className="py-2.5 pr-3 font-mono-data">{c.yield.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                <td className="py-2.5 pr-3 font-mono-data">₹{c.price.toLocaleString("en-IN")}</td>
-                <td className="py-2.5 pr-3 font-mono-data font-semibold">₹{c.totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                <td className="py-2.5 pr-3 font-mono-data">{c.yieldQty}</td>
+                <td className="py-2.5 pr-3 font-mono-data">{fmt(c.price)}</td>
+                <td className="py-2.5 pr-3 font-mono-data font-semibold">{fmt(c.totalValue)}</td>
+                <td className="py-2.5 pr-3 font-mono-data text-primary">{fmt(c.commission)}</td>
+                <td className="py-2.5 pr-3 font-mono-data">{fmt(c.farmerAmount)}</td>
                 <td className="py-2.5 pr-3">
-                  <Badge variant={c.status === "approved" ? "default" : "secondary"}>{c.status === "approved" ? "Approved" : "Pending"}</Badge>
+                  <Badge variant={c.status === "approved" || c.status === "funded" ? "default" : "secondary"}>
+                    {c.status === "approved" ? "Funded" : c.status === "funded" ? "Paid" : "Pending"}
+                  </Badge>
                 </td>
                 {canApprove && (
                   <td className="py-2.5">
                     {c.status === "pending" && (
                       <Button size="sm" variant="outline" className="btn-press gap-1" onClick={() => approve(c.id)}>
-                        <Check className="h-3 w-3" /> Approve
+                        <Check className="h-3 w-3" /> Approve & Fund
                       </Button>
                     )}
                   </td>
                 )}
               </tr>
             ))}
-            {crops.length === 0 && <tr><td colSpan={8} className="py-4 text-muted-foreground">No crop yield entries.</td></tr>}
+            {crops.length === 0 && <tr><td colSpan={10} className="py-4 text-muted-foreground">No crop yield entries.</td></tr>}
           </tbody>
         </table>
       </div>

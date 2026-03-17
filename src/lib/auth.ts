@@ -5,12 +5,14 @@ export interface User {
   password: string;
   role: UserRole;
   fullName: string;
+  phone: string;
 }
 
 export interface CurrentUser {
   username: string;
   role: UserRole;
   fullName: string;
+  phone: string;
 }
 
 const USERS_KEY = "AFMS_USERS";
@@ -28,6 +30,9 @@ export function registerUser(user: User): { success: boolean; error?: string } {
   if (users.find((u) => u.username === user.username)) {
     return { success: false, error: "Username already exists" };
   }
+  if (users.find((u) => u.phone === user.phone)) {
+    return { success: false, error: "Phone number already registered" };
+  }
   users.push(user);
   saveUsers(users);
   return { success: true };
@@ -37,7 +42,7 @@ export function loginUser(username: string, password: string): { success: boolea
   const users = getUsers();
   const user = users.find((u) => u.username === username && u.password === password);
   if (!user) return { success: false, error: "Invalid username or password" };
-  const currentUser: CurrentUser = { username: user.username, role: user.role, fullName: user.fullName };
+  const currentUser: CurrentUser = { username: user.username, role: user.role, fullName: user.fullName, phone: user.phone };
   sessionStorage.setItem("currentUser", JSON.stringify(currentUser));
   return { success: true, user: currentUser };
 }
@@ -51,10 +56,14 @@ export function logout() {
   sessionStorage.removeItem("currentUser");
 }
 
-export function resetPassword(username: string, newPassword: string): { success: boolean; error?: string } {
+export function getUserByPhone(phone: string): User | undefined {
+  return getUsers().find((u) => u.phone === phone);
+}
+
+export function resetPasswordByPhone(phone: string, newPassword: string): { success: boolean; error?: string } {
   const users = getUsers();
-  const idx = users.findIndex((u) => u.username === username);
-  if (idx === -1) return { success: false, error: "Username not found" };
+  const idx = users.findIndex((u) => u.phone === phone);
+  if (idx === -1) return { success: false, error: "Phone number not found" };
   if (newPassword.length < 4) return { success: false, error: "Password must be at least 4 characters" };
   users[idx].password = newPassword;
   saveUsers(users);
@@ -81,23 +90,30 @@ export function setVillageAssignments(assignments: VillageAssignment[]) {
 export function getAssignedVillages(username: string, role: UserRole): string[] {
   const assignments = getVillageAssignments();
   return assignments
-    .filter((a) => 
+    .filter((a) =>
       role === "supervisor" ? a.supervisors.includes(username) : a.organizers.includes(username)
     )
     .map((a) => a.village);
 }
 
-// Seed demo users if none exist
-export function seedDemoUsers() {
-  const users = getUsers();
-  if (users.length > 0) return;
-  const demos: User[] = [
-    { username: "nandhitha", password: "pass123", role: "operator", fullName: "Nandhitha K" },
-    { username: "arun", password: "pass123", role: "operator", fullName: "Arun V" },
-    { username: "ramesh", password: "pass123", role: "supervisor", fullName: "Ramesh S" },
-    { username: "suresh", password: "pass123", role: "supervisor", fullName: "Suresh M" },
-    { username: "priya", password: "pass123", role: "organizer", fullName: "Priya R" },
-    { username: "kavitha", password: "pass123", role: "organizer", fullName: "Kavitha D" },
-  ];
-  saveUsers(demos);
+// Leave management
+export interface LeaveRequest {
+  id: string;
+  username: string;
+  fullName: string;
+  role: UserRole;
+  date: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  appliedOn: string;
+}
+
+const LEAVES_KEY = "AFMS_LEAVES";
+
+export function getLeaveRequests(): LeaveRequest[] {
+  return JSON.parse(localStorage.getItem(LEAVES_KEY) || "[]");
+}
+
+export function saveLeaveRequests(leaves: LeaveRequest[]) {
+  localStorage.setItem(LEAVES_KEY, JSON.stringify(leaves));
 }
