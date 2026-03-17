@@ -1,20 +1,16 @@
 import AppLayout from "@/components/AppLayout";
 import { getAllDataForRole } from "@/lib/storage";
-import { getUsers, getCurrentUser } from "@/lib/auth";
+import { getUsers, getCurrentUser, getMyOperator, getVillageAssignments } from "@/lib/auth";
 import { Progress } from "@/components/ui/progress";
 
 export default function Attendance() {
   const user = getCurrentUser();
   const totalWorkingDays = 26;
-
-  // Supervisor sees only own attendance
-  // Organizer sees only organizer attendance
-  // Operator sees all supervisor + organizer attendance
   const role = user?.role;
+  const operatorNs = getMyOperator();
 
   const getAttendanceData = () => {
     if (role === "supervisor") {
-      // Show only own attendance
       const myData = getAllDataForRole("supervisor").find((d) => d.username === user?.username);
       const reports: any[] = (myData?.data as any)?.dailyReports || [];
       const uniqueDays = new Set(reports.map((r: any) => r.date)).size;
@@ -22,16 +18,19 @@ export default function Attendance() {
     }
 
     if (role === "organizer") {
-      // Show only own attendance
       const myData = getAllDataForRole("organizer").find((d) => d.username === user?.username);
       const checkIns: any[] = (myData?.data as any)?.dailyCheckIns || [];
       const uniqueDays = new Set(checkIns.map((r: any) => r.date)).size;
       return [{ name: user?.fullName || "", username: user?.username || "", present: uniqueDays, role: "Organizer" }];
     }
 
-    // Operator sees all
-    const supervisors = getUsers().filter((u) => u.role === "supervisor");
-    const organizers = getUsers().filter((u) => u.role === "organizer");
+    // Operator sees only their assigned supervisors & organizers
+    const assignments = getVillageAssignments(operatorNs);
+    const assignedSupUsernames = new Set(assignments.flatMap((a) => a.supervisors));
+    const assignedOrgUsernames = new Set(assignments.flatMap((a) => a.organizers));
+
+    const supervisors = getUsers().filter((u) => u.role === "supervisor" && assignedSupUsernames.has(u.username));
+    const organizers = getUsers().filter((u) => u.role === "organizer" && assignedOrgUsernames.has(u.username));
     const allSupData = getAllDataForRole("supervisor");
     const allOrgData = getAllDataForRole("organizer");
 

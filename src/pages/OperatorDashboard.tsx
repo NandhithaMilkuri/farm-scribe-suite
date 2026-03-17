@@ -2,17 +2,22 @@ import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import DashCard from "@/components/DashCard";
 import { Button } from "@/components/ui/button";
-import { getAllDataForRole } from "@/lib/storage";
-import { getUsers } from "@/lib/auth";
+import { getSharedData, getAllDataForRole } from "@/lib/storage";
+import { getUsers, getMyOperator, getVillageAssignments } from "@/lib/auth";
 import { Users, Sprout, IndianRupee, MapPin, ClipboardList, Car, Wallet, CalendarOff } from "lucide-react";
 
 export default function OperatorDashboard() {
   const navigate = useNavigate();
-  const supervisors = getUsers().filter((u) => u.role === "supervisor");
-  const organizers = getUsers().filter((u) => u.role === "organizer");
+  const operatorNs = getMyOperator();
 
-  const sharedRaw = localStorage.getItem("AFMS_SHARED");
-  const shared = sharedRaw ? JSON.parse(sharedRaw) : {};
+  // Only show users assigned to THIS operator
+  const assignments = getVillageAssignments(operatorNs);
+  const assignedSupUsernames = new Set(assignments.flatMap((a) => a.supervisors));
+  const assignedOrgUsernames = new Set(assignments.flatMap((a) => a.organizers));
+  const supervisors = getUsers().filter((u) => u.role === "supervisor" && assignedSupUsernames.has(u.username));
+  const organizers = getUsers().filter((u) => u.role === "organizer" && assignedOrgUsernames.has(u.username));
+
+  const shared = getSharedData<any>();
   const crops: any[] = shared.crops || [];
   let totalYieldValue = 0;
   let pendingPayments = 0;

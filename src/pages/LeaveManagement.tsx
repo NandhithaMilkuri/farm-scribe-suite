@@ -3,7 +3,7 @@ import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { getCurrentUser, getLeaveRequests, saveLeaveRequests, type LeaveRequest } from "@/lib/auth";
+import { getCurrentUser, getLeaveRequests, saveLeaveRequests, getMyOperator, type LeaveRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { CalendarOff, Check, X } from "lucide-react";
@@ -12,7 +12,8 @@ export default function LeaveManagement() {
   const { toast } = useToast();
   const user = getCurrentUser();
   const isOperator = user?.role === "operator";
-  const [leaves, setLeaves] = useState<LeaveRequest[]>(getLeaveRequests());
+  const operatorNs = getMyOperator();
+  const [leaves, setLeaves] = useState<LeaveRequest[]>(getLeaveRequests(operatorNs));
 
   const [date, setDate] = useState("");
   const [reason, setReason] = useState("");
@@ -33,10 +34,11 @@ export default function LeaveManagement() {
       reason: reason.trim(),
       status: "pending",
       appliedOn: new Date().toISOString().split("T")[0],
+      operatorNamespace: operatorNs,
     };
     const updated = [...leaves, leave];
     setLeaves(updated);
-    saveLeaveRequests(updated);
+    saveLeaveRequests(operatorNs, updated);
     setDate(""); setReason("");
     toast({ title: "Leave Request Submitted" });
   };
@@ -44,12 +46,11 @@ export default function LeaveManagement() {
   const updateStatus = (id: string, status: "approved" | "rejected") => {
     const updated = leaves.map((l) => l.id === id ? { ...l, status } : l);
     setLeaves(updated);
-    saveLeaveRequests(updated);
+    saveLeaveRequests(operatorNs, updated);
     toast({ title: `Leave ${status === "approved" ? "Approved" : "Rejected"}` });
   };
 
   const myLeaves = leaves.filter((l) => l.username === user?.username);
-  const allPending = leaves.filter((l) => l.status === "pending");
 
   const statusVariant = (s: string) => s === "approved" ? "default" : s === "rejected" ? "destructive" : "secondary";
 
