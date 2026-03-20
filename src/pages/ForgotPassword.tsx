@@ -4,8 +4,9 @@ import { getUserByPhone, resetPasswordByPhone } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sprout, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import nutrantaLogo from "@/assets/nutranta-logo.png";
 
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -66,9 +67,12 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="data-card w-full max-w-sm">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="rounded-lg bg-primary/10 p-2 text-primary"><Sprout className="h-6 w-6" /></div>
-          <h1 className="text-xl font-semibold tracking-tight">Reset Password</h1>
+        <div className="flex items-center gap-3 mb-6">
+          <img src={nutrantaLogo} alt="Nutranta" className="h-12 w-auto" />
+          <div>
+            <h1 className="text-lg font-bold tracking-tight text-foreground">Reset Password</h1>
+            <p className="text-xs text-muted-foreground">Nutranta Field Operations</p>
+          </div>
         </div>
 
         {step === "phone" && (
@@ -77,16 +81,16 @@ export default function ForgotPassword() {
               <Label>Registered Phone Number</Label>
               <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter 10-digit phone number" type="tel" maxLength={10} />
             </div>
-            <Button className="w-full btn-press" onClick={sendOtp}>Send OTP</Button>
+            <Button className="w-full btn-press gold-gradient text-primary-foreground font-semibold" onClick={sendOtp}>Send OTP</Button>
           </div>
         )}
 
         {step === "otp" && (
           <div className="space-y-4">
-            <div className="p-3 rounded-md bg-primary/5 border border-primary/20 flex items-center gap-2">
+            <div className="p-3 rounded-md bg-primary/10 border border-primary/30 flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary" />
               <div className="text-sm">
-                <p className="font-medium text-primary">OTP sent to {phone}</p>
+                <p className="font-medium text-foreground">OTP sent to {phone}</p>
                 <p className="text-muted-foreground text-xs">(Simulated — check the toast notification)</p>
               </div>
             </div>
@@ -94,14 +98,14 @@ export default function ForgotPassword() {
               <Label>Enter OTP</Label>
               <Input value={otpInput} onChange={(e) => setOtpInput(e.target.value)} placeholder="6-digit OTP" maxLength={6} />
             </div>
-            <Button className="w-full btn-press" onClick={verifyOtp}>Verify OTP</Button>
+            <Button className="w-full btn-press gold-gradient text-primary-foreground font-semibold" onClick={verifyOtp}>Verify OTP</Button>
             <Button variant="ghost" className="w-full" onClick={() => { setStep("phone"); setOtpInput(""); }}>Change Number</Button>
           </div>
         )}
 
         {step === "reset" && (
           <div className="space-y-4">
-            <div className="p-3 rounded-md bg-primary/5 border border-primary/20 text-sm text-primary font-medium">
+            <div className="p-3 rounded-md bg-primary/10 border border-primary/30 text-sm font-medium text-foreground">
               ✓ Phone verified. Set your new password.
             </div>
             <div>
@@ -112,12 +116,12 @@ export default function ForgotPassword() {
               <Label>Confirm Password</Label>
               <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" />
             </div>
-            <Button className="w-full btn-press" onClick={handleReset}>Reset Password</Button>
+            <Button className="w-full btn-press gold-gradient text-primary-foreground font-semibold" onClick={handleReset}>Reset Password</Button>
           </div>
         )}
 
         <p className="text-center text-sm text-muted-foreground mt-4">
-          <Link to="/login" className="text-primary underline">Back to Login</Link>
+          <Link to="/login" className="text-primary hover:underline font-medium">Back to Login</Link>
         </p>
       </div>
     </div>
