@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { loginUser } from "@/lib/auth";
+import { useState, useCallback } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { loginUser, type UserRole } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sprout, RefreshCw } from "lucide-react";
+import { RefreshCw, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import nutrantaLogo from "@/assets/nutranta-logo.png";
 
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 20) + 1;
@@ -13,7 +14,15 @@ function generateCaptcha() {
   return { question: `${a} + ${b} = ?`, answer: a + b };
 }
 
+const roleLabels: Record<string, string> = {
+  operator: "Operator",
+  supervisor: "Supervisor",
+  organizer: "Organizer",
+};
+
 export default function Login() {
+  const [searchParams] = useSearchParams();
+  const role = searchParams.get("role") as UserRole | null;
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [captchaInput, setCaptchaInput] = useState("");
@@ -39,6 +48,11 @@ export default function Login() {
     }
     const result = loginUser(username.trim(), password);
     if (result.success && result.user) {
+      if (role && result.user.role !== role) {
+        toast({ title: "Access Denied", description: `This account is not registered as ${roleLabels[role] || role}.`, variant: "destructive" });
+        refreshCaptcha();
+        return;
+      }
       navigate(`/${result.user.role}`);
     } else {
       toast({ title: "Login Failed", description: result.error, variant: "destructive" });
@@ -49,13 +63,16 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="data-card w-full max-w-sm">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="rounded-lg bg-primary/10 p-2 text-primary"><Sprout className="h-6 w-6" /></div>
+        <div className="flex items-center gap-3 mb-6">
+          <img src={nutrantaLogo} alt="Nutranta" className="h-12 w-auto" />
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Field Operations</h1>
-            <p className="text-xs text-muted-foreground">Agriculture Management System</p>
+            <h1 className="text-lg font-bold tracking-tight text-foreground">
+              {role ? `${roleLabels[role]} Login` : "Sign In"}
+            </h1>
+            <p className="text-xs text-muted-foreground">Nutranta Field Operations</p>
           </div>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="username">Username</Label>
@@ -77,11 +94,20 @@ export default function Login() {
             </div>
             <Input className="mt-2" value={captchaInput} onChange={(e) => setCaptchaInput(e.target.value)} placeholder="Enter answer" type="number" />
           </div>
-          <Button type="submit" className="w-full btn-press">Sign In</Button>
+          <Button type="submit" className="w-full btn-press gold-gradient text-primary-foreground font-semibold">
+            Sign In
+          </Button>
         </form>
+
         <div className="flex justify-between text-sm text-muted-foreground mt-4">
-          <Link to="/forgot-password" className="text-primary underline">Forgot Password?</Link>
-          <Link to="/register" className="text-primary underline">Register</Link>
+          <Link to="/forgot-password" className="text-primary hover:underline font-medium">Forgot Password?</Link>
+          <Link to={`/register${role ? `?role=${role}` : ""}`} className="text-primary hover:underline font-medium">Register</Link>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-border">
+          <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground" onClick={() => navigate("/")}>
+            <ArrowLeft className="h-4 w-4" /> Change Role
+          </Button>
         </div>
       </div>
     </div>

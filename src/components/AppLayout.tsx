@@ -4,6 +4,7 @@ import { getCurrentUser, logout } from "@/lib/auth";
 import { LayoutDashboard, ArrowLeft, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import nutrantaLogo from "@/assets/nutranta-logo.png";
 
 interface LayoutProps {
   children: ReactNode;
@@ -25,23 +26,23 @@ export default function AppLayout({ children, title }: LayoutProps) {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/");
   };
 
   const roleBadgeColor: Record<string, string> = {
     operator: "bg-accent text-accent-foreground",
     supervisor: "bg-primary text-primary-foreground",
-    organizer: "bg-destructive text-destructive-foreground",
+    organizer: "bg-accent/80 text-accent-foreground",
   };
 
   return (
     <div className="min-h-screen bg-background">
       <nav className="nav-bar sticky top-0 z-50">
         <div className="flex items-center gap-3 flex-1">
+          <img src={nutrantaLogo} alt="Nutranta" className="h-8 w-auto" />
           {!isOnDashboard && (
             <Button variant="ghost" size="sm" className="btn-press gap-1.5" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-4 w-4" />
-              Back
+              <ArrowLeft className="h-4 w-4" /> Back
             </Button>
           )}
           <Button
@@ -50,8 +51,7 @@ export default function AppLayout({ children, title }: LayoutProps) {
             className="btn-press gap-1.5"
             onClick={() => navigate(dashboardPath)}
           >
-            <LayoutDashboard className="h-4 w-4" />
-            Dashboard
+            <LayoutDashboard className="h-4 w-4" /> Dashboard
           </Button>
           <span className="text-sm text-muted-foreground hidden sm:inline">/ {title}</span>
         </div>
