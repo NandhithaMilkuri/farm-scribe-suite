@@ -1,28 +1,24 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { getUserByPhone, resetPasswordByPhone } from "@/lib/auth";
+import { getUserByPhone, resetPasswordByPhone, sendOTP, verifyOTP } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import nutrantaLogo from "@/assets/nutranta-logo.png";
-
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
 
 export default function ForgotPassword() {
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState<"phone" | "otp" | "reset">("phone");
-  const [generatedOtp, setGeneratedOtp] = useState("");
   const [otpInput, setOtpInput] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [sending, setSending] = useState(false);
   const { toast } = useToast();
 
-  const sendOtp = () => {
-    if (!phone.trim() || phone.trim().length < 10) {
+  const handleSendOtp = async () => {
+    if (!phone.trim() || !/^\d{10}$/.test(phone.trim())) {
       toast({ title: "Error", description: "Enter a valid 10-digit phone number.", variant: "destructive" });
       return;
     }
@@ -31,19 +27,28 @@ export default function ForgotPassword() {
       toast({ title: "Error", description: "Phone number not registered.", variant: "destructive" });
       return;
     }
-    const otp = generateOTP();
-    setGeneratedOtp(otp);
-    setStep("otp");
-    toast({ title: "OTP Sent (Simulated)", description: `Your OTP is: ${otp}` });
+    setSending(true);
+    const result = await sendOTP(phone.trim());
+    setSending(false);
+    if (result.success) {
+      setStep("otp");
+      toast({ title: "OTP Sent", description: `A verification code has been sent to ${phone}.` });
+    } else {
+      toast({ title: "SMS Failed", description: result.error || "Could not send OTP. Please try again.", variant: "destructive" });
+    }
   };
 
-  const verifyOtp = () => {
-    if (otpInput !== generatedOtp) {
-      toast({ title: "Error", description: "Invalid OTP. Please try again.", variant: "destructive" });
+  const handleVerifyOtp = () => {
+    if (!otpInput || otpInput.length !== 6) {
+      toast({ title: "Error", description: "Enter the 6-digit OTP.", variant: "destructive" });
       return;
     }
-    setStep("reset");
-    toast({ title: "OTP Verified" });
+    if (verifyOTP(phone.trim(), otpInput)) {
+      setStep("reset");
+      toast({ title: "OTP Verified" });
+    } else {
+      toast({ title: "Error", description: "Invalid or expired OTP. Please try again.", variant: "destructive" });
+    }
   };
 
   const handleReset = () => {
@@ -81,7 +86,9 @@ export default function ForgotPassword() {
               <Label>Registered Phone Number</Label>
               <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter 10-digit phone number" type="tel" maxLength={10} />
             </div>
-            <Button className="w-full btn-press gold-gradient text-primary-foreground font-semibold" onClick={sendOtp}>Send OTP</Button>
+            <Button className="w-full btn-press gold-gradient text-primary-foreground font-semibold" onClick={handleSendOtp} disabled={sending}>
+              {sending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending...</> : "Send OTP via SMS"}
+            </Button>
           </div>
         )}
 
@@ -90,15 +97,15 @@ export default function ForgotPassword() {
             <div className="p-3 rounded-md bg-primary/10 border border-primary/30 flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary" />
               <div className="text-sm">
-                <p className="font-medium text-foreground">OTP sent to {phone}</p>
-                <p className="text-muted-foreground text-xs">(Simulated — check the toast notification)</p>
+                <p className="font-medium text-foreground">OTP sent to +91 {phone}</p>
+                <p className="text-muted-foreground text-xs">Check your SMS messages</p>
               </div>
             </div>
             <div>
               <Label>Enter OTP</Label>
               <Input value={otpInput} onChange={(e) => setOtpInput(e.target.value)} placeholder="6-digit OTP" maxLength={6} />
             </div>
-            <Button className="w-full btn-press gold-gradient text-primary-foreground font-semibold" onClick={verifyOtp}>Verify OTP</Button>
+            <Button className="w-full btn-press gold-gradient text-primary-foreground font-semibold" onClick={handleVerifyOtp}>Verify OTP</Button>
             <Button variant="ghost" className="w-full" onClick={() => { setStep("phone"); setOtpInput(""); }}>Change Number</Button>
           </div>
         )}

@@ -76,7 +76,7 @@ export default function RoleSelect() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + i * 0.1, duration: 0.4 }}
-                onClick={() => navigate(`/login?role=${role.id}`)}
+                onClick={() => navigate(role.id === "operator" ? `/login?role=${role.id}` : `/login?role=${role.id}`)}
                 className="group relative overflow-hidden rounded-xl border border-border bg-card p-6 text-left transition-all hover:border-primary hover:shadow-lg hover:shadow-primary/10 focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <div className={`inline-flex rounded-lg bg-gradient-to-br ${role.gradient} p-3 text-accent-foreground mb-4`}>
@@ -85,9 +85,15 @@ export default function RoleSelect() {
                 <h2 className="text-lg font-semibold text-foreground mb-1">
                   {role.title}
                 </h2>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed mb-2">
                   {role.description}
                 </p>
+                {role.id === "operator" && (
+                  <span className="text-[10px] font-medium text-primary">Login or Register →</span>
+                )}
+                {role.id !== "operator" && (
+                  <span className="text-[10px] font-medium text-muted-foreground">Login only (created by Operator)</span>
+                )}
                 <div className="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-primary to-gold-glow scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
               </motion.button>
             ))}
