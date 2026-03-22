@@ -3,7 +3,7 @@ import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getSharedData, setSharedData } from "@/lib/storage";
-import { getUsers, getCurrentUser, getVillageAssignments, setVillageAssignments, getAssignedVillages, getMyOperator, setOperatorForUser } from "@/lib/auth";
+import { getCurrentUser, getVillageAssignments, setVillageAssignments, getAssignedVillages, getMyOperator, setOperatorForUser, getOperatorStaff } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Plus, Users } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,8 +21,9 @@ export default function Villages() {
   const myVillages = isOperator ? allVillages : (user ? getAssignedVillages(user.username, user.role) : []);
   const [villages, setVillages] = useState<string[]>(allVillages);
 
-  const supervisors = getUsers().filter((u) => u.role === "supervisor");
-  const organizers = getUsers().filter((u) => u.role === "organizer");
+  const allStaff = isOperator ? getOperatorStaff(operatorNs) : [];
+  const supervisors = allStaff.filter((u) => u.role === "supervisor");
+  const organizers = allStaff.filter((u) => u.role === "organizer");
   const [assignments, setAssignments] = useState(getVillageAssignments(operatorNs));
 
   const [assignVillage, setAssignVillage] = useState("");
