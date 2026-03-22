@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export type UserRole = "operator" | "supervisor" | "organizer";
 
 export interface User {
@@ -25,7 +27,8 @@ function saveUsers(users: User[]) {
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 }
 
-export function registerUser(user: User): { success: boolean; error?: string } {
+/** Only operators can self-register */
+export function registerOperator(user: Omit<User, "role">): { success: boolean; error?: string } {
   const users = getUsers();
   if (users.find((u) => u.username === user.username)) {
     return { success: false, error: "Username already exists" };
@@ -33,15 +36,50 @@ export function registerUser(user: User): { success: boolean; error?: string } {
   if (users.find((u) => u.phone === user.phone)) {
     return { success: false, error: "Phone number already registered" };
   }
-  users.push(user);
+  users.push({ ...user, role: "operator" });
   saveUsers(users);
   return { success: true };
 }
 
-export function loginUser(username: string, password: string): { success: boolean; user?: CurrentUser; error?: string } {
+/** Operator creates staff (supervisor/organizer) under their namespace */
+export function createStaffAccount(
+  operatorUsername: string,
+  staff: { username: string; password: string; fullName: string; phone: string; role: "supervisor" | "organizer" }
+): { success: boolean; error?: string } {
+  const users = getUsers();
+  if (users.find((u) => u.username === staff.username)) {
+    return { success: false, error: "Username already exists" };
+  }
+  if (users.find((u) => u.phone === staff.phone)) {
+    return { success: false, error: "Phone number already registered" };
+  }
+  users.push({
+    username: staff.username,
+    password: staff.password,
+    role: staff.role,
+    fullName: staff.fullName,
+    phone: staff.phone,
+  });
+  saveUsers(users);
+  // Map this staff to the operator
+  setOperatorForUser(staff.username, operatorUsername);
+  return { success: true };
+}
+
+/** Get staff members created by a specific operator */
+export function getOperatorStaff(operatorUsername: string): User[] {
+  const map = getOperatorMap();
+  const users = getUsers();
+  return users.filter((u) => map[u.username] === operatorUsername);
+}
+
+export function loginUser(username: string, password: string, expectedRole?: string): { success: boolean; user?: CurrentUser; error?: string } {
   const users = getUsers();
   const user = users.find((u) => u.username === username && u.password === password);
   if (!user) return { success: false, error: "Invalid username or password" };
+  if (expectedRole && user.role !== expectedRole) {
+    return { success: false, error: `This account is not registered as ${expectedRole}. Please select the correct role.` };
+  }
   const currentUser: CurrentUser = { username: user.username, role: user.role, fullName: user.fullName, phone: user.phone };
   sessionStorage.setItem("currentUser", JSON.stringify(currentUser));
   return { success: true, user: currentUser };
@@ -68,6 +106,40 @@ export function resetPasswordByPhone(phone: string, newPassword: string): { succ
   users[idx].password = newPassword;
   saveUsers(users);
   return { success: true };
+}
+
+/** Send real SMS via Twilio edge function */
+export async function sendSMS(to: string, message: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke("send-sms", {
+      body: { to, message },
+    });
+    if (error) return { success: false, error: error.message };
+    return data;
+  } catch (err: any) {
+    return { success: false, error: err.message || "SMS failed" };
+  }
+}
+
+/** Send OTP via real SMS */
+export async function sendOTP(phone: string): Promise<{ success: boolean; otp?: string; error?: string }> {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const result = await sendSMS(phone, `Your Nutranta verification code is: ${otp}. Do not share this with anyone.`);
+  if (result.success) {
+    // Store OTP temporarily (in production use server-side storage)
+    sessionStorage.setItem(`otp_${phone}`, JSON.stringify({ otp, expires: Date.now() + 5 * 60 * 1000 }));
+    return { success: true, otp };
+  }
+  return { success: false, error: result.error || "Failed to send OTP" };
+}
+
+export function verifyOTP(phone: string, inputOtp: string): boolean {
+  const stored = sessionStorage.getItem(`otp_${phone}`);
+  if (!stored) return false;
+  const { otp, expires } = JSON.parse(stored);
+  if (Date.now() > expires) { sessionStorage.removeItem(`otp_${phone}`); return false; }
+  if (otp === inputOtp) { sessionStorage.removeItem(`otp_${phone}`); return true; }
+  return false;
 }
 
 // ── Operator Mapping ──
