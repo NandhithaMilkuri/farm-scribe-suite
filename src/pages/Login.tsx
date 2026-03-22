@@ -46,19 +46,16 @@ export default function Login() {
       refreshCaptcha();
       return;
     }
-    const result = loginUser(username.trim(), password);
+    const result = loginUser(username.trim(), password, role || undefined);
     if (result.success && result.user) {
-      if (role && result.user.role !== role) {
-        toast({ title: "Access Denied", description: `This account is not registered as ${roleLabels[role] || role}.`, variant: "destructive" });
-        refreshCaptcha();
-        return;
-      }
       navigate(`/${result.user.role}`);
     } else {
       toast({ title: "Login Failed", description: result.error, variant: "destructive" });
       refreshCaptcha();
     }
   };
+
+  const isOperator = role === "operator";
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -72,6 +69,12 @@ export default function Login() {
             <p className="text-xs text-muted-foreground">Nutranta Field Operations</p>
           </div>
         </div>
+
+        {!isOperator && role && (
+          <div className="mb-4 p-3 rounded-md bg-secondary/50 border border-border text-xs text-muted-foreground">
+            {roleLabels[role]} accounts are created by your Operator. Contact your operator for login credentials.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -101,7 +104,9 @@ export default function Login() {
 
         <div className="flex justify-between text-sm text-muted-foreground mt-4">
           <Link to="/forgot-password" className="text-primary hover:underline font-medium">Forgot Password?</Link>
-          <Link to={`/register${role ? `?role=${role}` : ""}`} className="text-primary hover:underline font-medium">Register</Link>
+          {isOperator && (
+            <Link to="/register" className="text-primary hover:underline font-medium">Register</Link>
+          )}
         </div>
 
         <div className="mt-4 pt-4 border-t border-border">

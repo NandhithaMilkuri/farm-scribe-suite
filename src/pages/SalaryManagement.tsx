@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getAllDataForRole } from "@/lib/storage";
-import { getUsers, getCurrentUser, getMyOperator, getVillageAssignments } from "@/lib/auth";
+import { getCurrentUser, getMyOperator, getOperatorStaff } from "@/lib/auth";
+import { sendSMS } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { IndianRupee } from "lucide-react";
@@ -31,10 +32,8 @@ export default function SalaryManagement() {
   const operatorNs = getMyOperator();
   const canCredit = user?.role === "operator";
 
-  // Only show supervisors assigned to this operator
-  const assignments = getVillageAssignments(operatorNs);
-  const assignedSupUsernames = new Set(assignments.flatMap((a) => a.supervisors));
-  const supervisors = getUsers().filter((u) => u.role === "supervisor" && assignedSupUsernames.has(u.username));
+  // Only show supervisors belonging to this operator
+  const supervisors = getOperatorStaff(operatorNs).filter((u) => u.role === "supervisor");
   const allSupervisorData = getAllDataForRole("supervisor");
 
   const [selectedSup, setSelectedSup] = useState("");
@@ -75,7 +74,14 @@ export default function SalaryManagement() {
     const updated = records.map((r) => r.id === id ? { ...r, status: "credited" as const } : r);
     setRecords(updated);
     localStorage.setItem(salariesKey(operatorNs), JSON.stringify(updated));
-    toast({ title: "Salary Credited", description: "Payment has been processed." });
+    const record = updated.find((r) => r.id === id);
+    if (record) {
+      const sup = supervisors.find((s) => s.username === record.username);
+      if (sup?.phone) {
+        sendSMS(sup.phone, `Nutranta: Your salary of ₹${record.totalSalary.toLocaleString("en-IN")} for ${record.month} has been credited. Thank you!`);
+      }
+    }
+    toast({ title: "Salary Credited", description: "Payment has been processed. SMS sent." });
   };
 
   return (

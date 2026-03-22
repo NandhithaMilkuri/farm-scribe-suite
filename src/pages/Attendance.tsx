@@ -1,6 +1,6 @@
 import AppLayout from "@/components/AppLayout";
 import { getAllDataForRole } from "@/lib/storage";
-import { getUsers, getCurrentUser, getMyOperator, getVillageAssignments } from "@/lib/auth";
+import { getCurrentUser, getMyOperator, getOperatorStaff } from "@/lib/auth";
 import { Progress } from "@/components/ui/progress";
 
 export default function Attendance() {
@@ -25,12 +25,9 @@ export default function Attendance() {
     }
 
     // Operator sees only their assigned supervisors & organizers
-    const assignments = getVillageAssignments(operatorNs);
-    const assignedSupUsernames = new Set(assignments.flatMap((a) => a.supervisors));
-    const assignedOrgUsernames = new Set(assignments.flatMap((a) => a.organizers));
-
-    const supervisors = getUsers().filter((u) => u.role === "supervisor" && assignedSupUsernames.has(u.username));
-    const organizers = getUsers().filter((u) => u.role === "organizer" && assignedOrgUsernames.has(u.username));
+    const staff = getOperatorStaff(operatorNs);
+    const supervisors = staff.filter((u) => u.role === "supervisor");
+    const organizers = staff.filter((u) => u.role === "organizer");
     const allSupData = getAllDataForRole("supervisor");
     const allOrgData = getAllDataForRole("organizer");
 

@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { getSharedData, setSharedData } from "@/lib/storage";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Send, Smartphone } from "lucide-react";
+import { Smartphone } from "lucide-react";
+import { sendSMS } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
 
 function buildUpiLink(payeeName: string, amount: number, bankAccount?: string) {
@@ -47,6 +48,11 @@ export default function FarmerPayments() {
     const phone = farmer?.phone || "N/A";
     setSmsNotif({ farmer: entry.farmerName, phone, amount });
     setTimeout(() => setSmsNotif(null), 5000);
+
+    // Send real SMS to farmer
+    if (farmer?.phone) {
+      sendSMS(farmer.phone, `Nutranta: ₹${amount.toLocaleString("en-IN")} has been credited to your account for crop payment. Thank you!`);
+    }
 
     toast({
       title: `₹${amount.toLocaleString("en-IN")} — UPI Payment Initiated`,
