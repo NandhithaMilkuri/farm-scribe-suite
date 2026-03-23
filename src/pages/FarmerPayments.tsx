@@ -8,15 +8,16 @@ import { Smartphone } from "lucide-react";
 import { sendSMS } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
 
-function buildUpiLink(payeeName: string, amount: number, bankAccount?: string) {
-  // UPI deep link format - opens PhonePe/GPay/Paytm on mobile
+function buildUpiLink(payeeName: string, amount: number, upiId?: string) {
   const params = new URLSearchParams({
     pn: payeeName,
     am: amount.toFixed(2),
     cu: "INR",
     tn: `Nutranta crop payment to ${payeeName}`,
   });
-  // If farmer has UPI ID, use pa= param; otherwise user enters manually
+  if (upiId) {
+    params.set("pa", upiId);
+  }
   return `upi://pay?${params.toString()}`;
 }
 
@@ -36,8 +37,8 @@ export default function FarmerPayments() {
     const farmer = farmers.find((f: any) => f.name === entry.farmerName);
     const amount = entry.farmerAmount;
 
-    // Open UPI deep link
-    const upiLink = buildUpiLink(entry.farmerName, amount, farmer?.bankAccount);
+    // Open UPI deep link - works with PhonePe, GPay, Paytm
+    const upiLink = buildUpiLink(entry.farmerName, amount, farmer?.upiId);
     window.open(upiLink, "_blank");
 
     // Mark as funded
@@ -49,14 +50,13 @@ export default function FarmerPayments() {
     setSmsNotif({ farmer: entry.farmerName, phone, amount });
     setTimeout(() => setSmsNotif(null), 5000);
 
-    // Send real SMS to farmer
     if (farmer?.phone) {
       sendSMS(farmer.phone, `Nutranta: ₹${amount.toLocaleString("en-IN")} has been credited to your account for crop payment. Thank you!`);
     }
 
     toast({
       title: `₹${amount.toLocaleString("en-IN")} — UPI Payment Initiated`,
-      description: `Payment to ${entry.farmerName} via UPI. SMS sent to: ${phone}`,
+      description: `Payment to ${entry.farmerName} via PhonePe/GPay. SMS sent to: ${phone}`,
     });
   };
 
@@ -72,7 +72,7 @@ export default function FarmerPayments() {
             exit={{ opacity: 0, y: -20 }}
             className="mb-4 p-4 rounded-lg bg-primary/10 border border-primary/30"
           >
-            <p className="font-semibold text-foreground">Payment Initiated via UPI</p>
+            <p className="font-semibold text-foreground">Payment Initiated via UPI (PhonePe/GPay)</p>
             <p className="text-sm">₹{smsNotif.amount.toLocaleString("en-IN")} to {smsNotif.farmer}'s account.</p>
             <p className="text-sm text-muted-foreground">SMS notification sent to: {smsNotif.phone}</p>
           </motion.div>
@@ -92,7 +92,6 @@ export default function FarmerPayments() {
                   <th className="py-2 pr-3">Village</th>
                   <th className="py-2 pr-3">Crop</th>
                   <th className="py-2 pr-3">Qty (qtl)</th>
-                  <th className="py-2 pr-3">Price (₹/qtl)</th>
                   <th className="py-2 pr-3">Total Value</th>
                   <th className="py-2 pr-3">Your 10%</th>
                   <th className="py-2 pr-3">Farmer Gets</th>
@@ -111,7 +110,6 @@ export default function FarmerPayments() {
                       <td className="py-2.5 pr-3">{c.village}</td>
                       <td className="py-2.5 pr-3">{c.cropType}</td>
                       <td className="py-2.5 pr-3 font-mono-data">{c.yieldQty}</td>
-                      <td className="py-2.5 pr-3 font-mono-data">{fmt(c.price)}</td>
                       <td className="py-2.5 pr-3 font-mono-data font-semibold">{fmt(c.totalValue)}</td>
                       <td className="py-2.5 pr-3 font-mono-data text-primary">{fmt(c.commission)}</td>
                       <td className="py-2.5 pr-3 font-mono-data font-semibold">{fmt(c.farmerAmount)}</td>

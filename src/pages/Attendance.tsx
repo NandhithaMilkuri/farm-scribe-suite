@@ -8,23 +8,24 @@ export default function Attendance() {
   const totalWorkingDays = 26;
   const role = user?.role;
   const operatorNs = getMyOperator();
+  const today = new Date().toISOString().split("T")[0];
 
   const getAttendanceData = () => {
     if (role === "supervisor") {
       const myData = getAllDataForRole("supervisor").find((d) => d.username === user?.username);
       const reports: any[] = (myData?.data as any)?.dailyReports || [];
-      const uniqueDays = new Set(reports.map((r: any) => r.date)).size;
-      return [{ name: user?.fullName || "", username: user?.username || "", present: uniqueDays, role: "Supervisor" }];
+      // Only count reports where the report date matches today (submitted same day)
+      const uniqueDays = new Set(reports.filter((r: any) => r.submittedOn === r.date || !r.submittedOn).map((r: any) => r.date)).size;
+      return [{ name: user?.fullName || "", username: user?.username || "", present: uniqueDays, todayPresent: reports.some((r: any) => r.date === today), role: "Supervisor" }];
     }
 
     if (role === "organizer") {
       const myData = getAllDataForRole("organizer").find((d) => d.username === user?.username);
       const checkIns: any[] = (myData?.data as any)?.dailyCheckIns || [];
-      const uniqueDays = new Set(checkIns.map((r: any) => r.date)).size;
-      return [{ name: user?.fullName || "", username: user?.username || "", present: uniqueDays, role: "Organizer" }];
+      const uniqueDays = new Set(checkIns.filter((r: any) => r.submittedOn === r.date || !r.submittedOn).map((r: any) => r.date)).size;
+      return [{ name: user?.fullName || "", username: user?.username || "", present: uniqueDays, todayPresent: checkIns.some((r: any) => r.date === today), role: "Organizer" }];
     }
 
-    // Operator sees only their assigned supervisors & organizers
     const staff = getOperatorStaff(operatorNs);
     const supervisors = staff.filter((u) => u.role === "supervisor");
     const organizers = staff.filter((u) => u.role === "organizer");
@@ -34,15 +35,18 @@ export default function Attendance() {
     const supAttendance = supervisors.map((sup) => {
       const userData = allSupData.find((d) => d.username === sup.username);
       const reports: any[] = (userData?.data as any)?.dailyReports || [];
-      const uniqueDays = new Set(reports.map((r: any) => r.date)).size;
-      return { name: sup.fullName, username: sup.username, present: uniqueDays, role: "Supervisor" };
+      // Only count reports submitted on the same day as report date
+      const validReports = reports.filter((r: any) => r.submittedOn === r.date || !r.submittedOn);
+      const uniqueDays = new Set(validReports.map((r: any) => r.date)).size;
+      return { name: sup.fullName, username: sup.username, present: uniqueDays, todayPresent: validReports.some((r: any) => r.date === today), role: "Supervisor" };
     });
 
     const orgAttendance = organizers.map((org) => {
       const userData = allOrgData.find((d) => d.username === org.username);
       const checkIns: any[] = (userData?.data as any)?.dailyCheckIns || [];
-      const uniqueDays = new Set(checkIns.map((r: any) => r.date)).size;
-      return { name: org.fullName, username: org.username, present: uniqueDays, role: "Organizer" };
+      const validCheckIns = checkIns.filter((r: any) => r.submittedOn === r.date || !r.submittedOn);
+      const uniqueDays = new Set(validCheckIns.map((r: any) => r.date)).size;
+      return { name: org.fullName, username: org.username, present: uniqueDays, todayPresent: validCheckIns.some((r: any) => r.date === today), role: "Organizer" };
     });
 
     return [...supAttendance, ...orgAttendance];
@@ -58,6 +62,7 @@ export default function Attendance() {
             <tr className="border-b border-border text-left text-muted-foreground">
               <th className="py-2 pr-4">Name</th>
               <th className="py-2 pr-4">Role</th>
+              <th className="py-2 pr-4">Today</th>
               <th className="py-2 pr-4">Total Working Days</th>
               <th className="py-2 pr-4">Days Present</th>
               <th className="py-2 pr-4 min-w-[120px]">Progress</th>
@@ -68,6 +73,9 @@ export default function Attendance() {
               <tr key={a.username} className="border-b border-border last:border-0">
                 <td className="py-3 pr-4 font-medium">{a.name}</td>
                 <td className="py-3 pr-4">{a.role}</td>
+                <td className="py-3 pr-4">
+                  <span className={`inline-block w-3 h-3 rounded-full ${a.todayPresent ? "bg-primary" : "bg-muted"}`} />
+                </td>
                 <td className="py-3 pr-4 font-mono-data">{totalWorkingDays}</td>
                 <td className="py-3 pr-4 font-mono-data">{a.present}</td>
                 <td className="py-3 pr-4">
@@ -78,7 +86,7 @@ export default function Attendance() {
                 </td>
               </tr>
             ))}
-            {attendanceData.length === 0 && <tr><td colSpan={5} className="py-4 text-muted-foreground">No attendance data found.</td></tr>}
+            {attendanceData.length === 0 && <tr><td colSpan={6} className="py-4 text-muted-foreground">No attendance data found.</td></tr>}
           </tbody>
         </table>
       </div>

@@ -32,7 +32,6 @@ export default function SalaryManagement() {
   const operatorNs = getMyOperator();
   const canCredit = user?.role === "operator";
 
-  // Only show supervisors belonging to this operator
   const supervisors = getOperatorStaff(operatorNs).filter((u) => u.role === "supervisor");
   const allSupervisorData = getAllDataForRole("supervisor");
 
@@ -43,12 +42,17 @@ export default function SalaryManagement() {
   const savedRecords = JSON.parse(localStorage.getItem(salariesKey(operatorNs)) || "[]");
   const [records, setRecords] = useState<SalaryRecord[]>(savedRecords);
 
-  const getSupTotals = (username: string) => {
+  // Filter travel bills by selected month
+  const getSupTotals = (username: string, forMonth: string) => {
     const userData = allSupervisorData.find((d) => d.username === username);
     const travelBills: any[] = (userData?.data as any)?.travelBills || [];
-    const totalDA = travelBills.reduce((s: number, t: any) => s + (t.da || 0), 0);
-    const totalTA = travelBills.reduce((s: number, t: any) => s + (t.petrolAmount || 0), 0);
-    return { totalDA, totalTA };
+    // Filter by month field, or fallback to date substring
+    const monthBills = forMonth
+      ? travelBills.filter((t: any) => (t.month || t.date?.substring(0, 7)) === forMonth)
+      : travelBills;
+    const totalDA = monthBills.reduce((s: number, t: any) => s + (t.da || 0), 0);
+    const totalTA = monthBills.reduce((s: number, t: any) => s + (t.petrolAmount || 0), 0);
+    return { totalDA, totalTA, billCount: monthBills.length };
   };
 
   const addSupervisorSalary = () => {
@@ -57,7 +61,7 @@ export default function SalaryManagement() {
       return;
     }
     const sup = supervisors.find((s) => s.username === selectedSup);
-    const { totalDA, totalTA } = getSupTotals(selectedSup);
+    const { totalDA, totalTA } = getSupTotals(selectedSup, month);
     const base = parseFloat(baseSalary);
     const record: SalaryRecord = {
       id: Date.now().toString(), username: selectedSup, name: sup?.fullName || selectedSup,
@@ -78,10 +82,13 @@ export default function SalaryManagement() {
     if (record) {
       const sup = supervisors.find((s) => s.username === record.username);
       if (sup?.phone) {
+        // Open UPI for salary payment
+        const upiLink = `upi://pay?pn=${encodeURIComponent(sup.fullName)}&am=${record.totalSalary.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Nutranta salary ${record.month}`)}`;
+        window.open(upiLink, "_blank");
         sendSMS(sup.phone, `Nutranta: Your salary of ₹${record.totalSalary.toLocaleString("en-IN")} for ${record.month} has been credited. Thank you!`);
       }
     }
-    toast({ title: "Salary Credited", description: "Payment has been processed. SMS sent." });
+    toast({ title: "Salary Credited", description: "UPI payment initiated. SMS sent." });
   };
 
   return (
@@ -98,10 +105,11 @@ export default function SalaryManagement() {
             <Input type="number" value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} placeholder="Base salary (₹)" />
             <Button className="btn-press gap-1.5" onClick={addSupervisorSalary}><IndianRupee className="h-4 w-4" /> Create</Button>
           </div>
-          {selectedSup && (
+          {selectedSup && month && (
             <div className="text-sm text-muted-foreground grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <span>Total DA: <span className="font-mono-data font-semibold text-foreground">₹{getSupTotals(selectedSup).totalDA.toLocaleString("en-IN")}</span></span>
-              <span>Total TA: <span className="font-mono-data font-semibold text-foreground">₹{getSupTotals(selectedSup).totalTA.toLocaleString("en-IN")}</span></span>
+              <span>DA ({month}): <span className="font-mono-data font-semibold text-foreground">₹{getSupTotals(selectedSup, month).totalDA.toLocaleString("en-IN")}</span></span>
+              <span>TA ({month}): <span className="font-mono-data font-semibold text-foreground">₹{getSupTotals(selectedSup, month).totalTA.toLocaleString("en-IN")}</span></span>
+              <span>Bills: <span className="font-mono-data font-semibold text-foreground">{getSupTotals(selectedSup, month).billCount}</span></span>
             </div>
           )}
         </div>
@@ -131,7 +139,7 @@ export default function SalaryManagement() {
                 <td className="py-2.5 pr-3 font-mono-data font-semibold">₹{r.totalSalary.toLocaleString("en-IN")}</td>
                 <td className="py-2.5 pr-3"><Badge variant={r.status === "credited" ? "default" : "secondary"}>{r.status === "credited" ? "Credited" : "Pending"}</Badge></td>
                 {canCredit && (
-                  <td className="py-2.5">{r.status === "pending" && <Button size="sm" className="btn-press" onClick={() => creditSalary(r.id)}>Credit</Button>}</td>
+                  <td className="py-2.5">{r.status === "pending" && <Button size="sm" className="btn-press" onClick={() => creditSalary(r.id)}>Credit via UPI</Button>}</td>
                 )}
               </tr>
             ))}

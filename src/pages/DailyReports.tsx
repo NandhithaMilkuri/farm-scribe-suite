@@ -17,6 +17,7 @@ interface DailyReport {
   farmersMet: number;
   description: string;
   image?: string;
+  submittedOn: string; // actual submission date
 }
 
 export default function DailyReports() {
@@ -27,13 +28,15 @@ export default function DailyReports() {
   const villages: string[] = shared.villages || [];
   const [reports, setReports] = useState<DailyReport[]>(data.dailyReports || []);
 
-  const [date, setDate] = useState("");
+  const today = new Date().toISOString().split("T")[0];
   const [village, setVillage] = useState("");
   const [farmersMet, setFarmersMet] = useState("");
   const [description, setDescription] = useState("");
   const [imagePreview, setImagePreview] = useState<string>("");
 
   const canAdd = user?.role === "supervisor";
+  // Check if already submitted today
+  const alreadySubmittedToday = reports.some((r) => r.date === today);
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,28 +47,31 @@ export default function DailyReports() {
   };
 
   const addReport = () => {
-    if (!date || !village || !farmersMet || !description.trim()) {
+    if (!village || !farmersMet || !description.trim()) {
       toast({ title: "Error", description: "All fields are required.", variant: "destructive" });
       return;
     }
+    if (alreadySubmittedToday) {
+      toast({ title: "Error", description: "You already submitted today's report.", variant: "destructive" });
+      return;
+    }
     const report: DailyReport = {
-      id: Date.now().toString(), date, village, farmersMet: parseInt(farmersMet),
-      description: description.trim(), image: imagePreview || undefined,
+      id: Date.now().toString(), date: today, village, farmersMet: parseInt(farmersMet),
+      description: description.trim(), image: imagePreview || undefined, submittedOn: today,
     };
     const updated = [...reports, report];
     setReports(updated);
     setUserData({ dailyReports: updated });
-    setDate(""); setVillage(""); setFarmersMet(""); setDescription(""); setImagePreview("");
+    setVillage(""); setFarmersMet(""); setDescription(""); setImagePreview("");
     toast({ title: "Daily Report Submitted" });
   };
 
   return (
     <AppLayout title="Daily Reports">
-      {canAdd && (
+      {canAdd && !alreadySubmittedToday && (
         <div className="data-card mb-4 space-y-3">
-          <h2 className="font-semibold text-sm">Submit Daily Report</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <h2 className="font-semibold text-sm">Submit Today's Report ({today})</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select value={village} onValueChange={setVillage}>
               <SelectTrigger><SelectValue placeholder="Village visited" /></SelectTrigger>
               <SelectContent>{villages.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
@@ -78,6 +84,11 @@ export default function DailyReports() {
             {imagePreview && <ImagePreview src={imagePreview} className="h-16 w-16" alt="Report" />}
           </div>
           <Button className="btn-press gap-1.5" onClick={addReport}><Plus className="h-4 w-4" /> Submit Report</Button>
+        </div>
+      )}
+      {canAdd && alreadySubmittedToday && (
+        <div className="data-card mb-4 bg-primary/5 border-primary/20">
+          <p className="text-sm text-primary font-medium">✓ Today's report already submitted.</p>
         </div>
       )}
       <div className="space-y-3">
