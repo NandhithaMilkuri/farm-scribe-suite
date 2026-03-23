@@ -48,8 +48,14 @@ serve(async (req) => {
     const data = await response.json();
     if (!response.ok) {
       console.error('Twilio error:', data);
-      return new Response(JSON.stringify({ success: false, error: `SMS failed [${response.status}]` }), {
-        status: 500,
+      const providerMessage = typeof data?.message === 'string' ? data.message : 'SMS provider rejected the request';
+      const providerCode = data?.code ? ` (code ${data.code})` : '';
+
+      return new Response(JSON.stringify({
+        success: false,
+        error: `${providerMessage}${providerCode}`,
+      }), {
+        status: response.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
