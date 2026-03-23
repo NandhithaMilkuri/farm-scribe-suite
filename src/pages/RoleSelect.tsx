@@ -101,6 +101,13 @@ export default function RoleSelect() {
         </div>
       </main>
 
+      {/* Forgot Password Link */}
+      <div className="text-center pb-2">
+        <a href="/forgot-password" className="text-sm text-primary hover:underline font-medium">
+          Forgot Password?
+        </a>
+      </div>
+
       {/* Footer */}
       <footer className="py-4 text-center text-xs text-muted-foreground border-t border-border">
         © {new Date().getFullYear()} Nutranta Seeds Pvt. Ltd. All rights reserved.
